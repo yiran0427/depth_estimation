@@ -52,13 +52,12 @@ class KittiDataset(Dataset):
         
         left_image = Image.open(self.left_paths[idx])
         sample['left_image'] = left_image
-        if self.transform:
-            sample['left_image'] = self.transform(left_image)
         
         if self.mode == 'train':
             right_image = Image.open(self.right_paths[idx])
             sample['right_image'] = right_image
-            if self.transform:
-                sample['right_image'] = self.transform(right_image)
+
+        if self.transform:
+            sample = self.transform(sample)
                 
         return sample
