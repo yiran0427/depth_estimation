@@ -62,9 +62,7 @@ class Model(object):
             for idx, data in enumerate(dataloader):
                 data = to_device(data, self.device)
                 left = data['left_image']
-                print('left ', left.shape)
                 disps = self.model(left)
-                print('disps ', disps[0].shape)
                 disp = disps[0][:, 0, :, :].unsqueeze(1)
                 disparities[idx] = disp[0].squeeze().cpu().numpy()
                 disparities_pp[idx] = post_process_disparity(disps[0][:, 0, :, :].cpu().numpy())
@@ -79,7 +77,6 @@ class Model(object):
         self.model.load_state_dict(torch.load(path))
 
 def post_process_disparity(disp):
-    print(disp.shape)
     (_, h, w) = disp.shape
     l_disp = disp[0, :, :]
     r_disp = np.fliplr(disp[1, :, :])
