@@ -44,12 +44,12 @@ class MyNet(nn.Module):
     def conv_block(self, in_dim, out_dim, kernel):
         layers = []
         layers += [
-            nn.Conv2d(in_dim, out_dim, kernel_size=kernel, stride=2),
+            nn.Conv2d(in_dim, out_dim, kernel_size=kernel, stride=1, padding=int((kernel-1)/2)),
             nn.BatchNorm2d(out_dim),
             nn.ELU(),
         ]
         layers += [
-            nn.Conv2d(out_dim, out_dim, kernel_size=kernel, stride=1),
+            nn.Conv2d(out_dim, out_dim, kernel_size=kernel, stride=2, padding=int((kernel-1)/2)),
             nn.BatchNorm2d(out_dim),
             nn.ELU(),
         ]
@@ -58,7 +58,7 @@ class MyNet(nn.Module):
     def upconv_block(self, in_dim, out_dim):
         layers = []
         layers += [
-            nn.Conv2d(in_dim, out_dim, kernel_size=3, stride=1),
+            nn.Conv2d(in_dim, out_dim, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(out_dim),
             nn.ELU(),
         ]
@@ -67,7 +67,7 @@ class MyNet(nn.Module):
     def iconv_block(self, in_dim, out_dim):
         layers = []
         layers += [
-            nn.Conv2d(in_dim, out_dim, kernel_size=3, stride=1),
+            nn.Conv2d(in_dim, out_dim, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(out_dim),
             nn.ELU(),
         ]
@@ -76,11 +76,10 @@ class MyNet(nn.Module):
     def disp_block(self, in_dim):
         layers = []
         layers += [
-            nn.Conv2d(in_dim, 2, kernel_size=3, stride=1),
+            nn.Conv2d(in_dim, 2, kernel_size=3, stride=1, padding=1),
             nn.Sigmoid(),
         ]
         return nn.Sequential(*layers)
-        
 
     def forward(self, x):
         # encoder
@@ -91,7 +90,7 @@ class MyNet(nn.Module):
         conv5 = self.conv5(conv4)
         conv6 = self.conv6(conv5)
         conv7 = self.conv7(conv6)
-        
+
         # decoder
         upconv7 = self.upconv7(F.interpolate(conv7, scale_factor=2, mode='bilinear', align_corners=True))
         concat7 = torch.cat([upconv7, conv6], 1)
@@ -99,11 +98,11 @@ class MyNet(nn.Module):
         
         upconv6 = self.upconv6(F.interpolate(iconv7, scale_factor=2, mode='bilinear', align_corners=True))
         concat6 = torch.cat([upconv6, conv5], 1)
-        iconv6 = self.iconv7(concat6)
+        iconv6 = self.iconv6(concat6)
         
         upconv5 = self.upconv5(F.interpolate(iconv6, scale_factor=2, mode='bilinear', align_corners=True))
         concat5 = torch.cat([upconv5, conv4], 1)
-        iconv5 = self.iconv7(concat5)
+        iconv5 = self.iconv5(concat5)
         
         upconv4 = self.upconv4(F.interpolate(iconv5, scale_factor=2, mode='bilinear', align_corners=True))
         concat4 = torch.cat([upconv4, conv3], 1)
@@ -115,11 +114,13 @@ class MyNet(nn.Module):
         concat3 = torch.cat([upconv3, conv2, udisp4], 1)
         iconv3 = self.iconv3(concat3)
         self.disp3 = self.disp3_layer(iconv3)
-        
+        udisp3 = F.interpolate(self.disp3, scale_factor=2, mode='bilinear', align_corners=True)
+
         upconv2 = self.upconv2(F.interpolate(iconv3, scale_factor=2, mode='bilinear', align_corners=True))
         concat2 = torch.cat([upconv2, conv1, udisp3], 1)
         iconv2 = self.iconv2(concat2)
         self.disp2 = self.disp2_layer(iconv2)
+        udisp2 = F.interpolate(self.disp2, scale_factor=2, mode='bilinear', align_corners=True)
         
         upconv1 = self.upconv1(F.interpolate(iconv2, scale_factor=2, mode='bilinear', align_corners=True))
         concat1 = torch.cat([upconv1, udisp2], 1)
