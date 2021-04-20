@@ -8,7 +8,9 @@ from resnet import MyNet
 from loss import MonodepthLoss
 
 class Model(object):
-    def __init__(self, train_loader, test_loader, device='cpu', epochs=10, save_per_epoch='none', img_height=256, img_width=512, model_path='output_model', disp_path='output_disp'):
+    def __init__(self, train_loader, test_loader, device='cpu', epochs=10, save_per_epoch='none', 
+        img_height=256, img_width=512, model_path='output_model', disp_path='output_disp'):
+    
         self.train_loader = train_loader
         self.test_loader = test_loader
         self.device = device
@@ -68,7 +70,6 @@ class Model(object):
                 left = data['left_image']
                 disps = self.model(left) 
                 disp = disps[0] # [batch, 2, width, height]
-                print(disp.shape)
                 for i in range(len(self.test_loader.dataset)):
                     disparities[i] = disp[i, 0, :, :].squeeze().cpu().numpy()
                     disparities_pp[i] = post_process_disparity(disp[i, :, :, :].cpu().numpy())
@@ -82,6 +83,8 @@ class Model(object):
     def load(self, path):
         self.model.load_state_dict(torch.load(path))
 
+
+# https://github.com/mrharicot/monodepth
 def post_process_disparity(disp):
     (_, h, w) = disp.shape
     l_disp = disp[0, :, :]
@@ -91,6 +94,7 @@ def post_process_disparity(disp):
     l_mask = 1.0 - np.clip(20 * (l - 0.05), 0, 1)
     r_mask = np.fliplr(l_mask)
     return r_mask * l_disp + l_mask * r_disp + (1.0 - l_mask - r_mask) * m_disp
+
 
 def to_device(input, device):
     if torch.is_tensor(input):
