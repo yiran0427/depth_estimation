@@ -3,11 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_ssim
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-
-
 class MonodepthLoss(nn.modules.Module):
     def __init__(self, n=4, SSIM_w=0.85, disp_gradient_w=1.0, lr_w=1.0):
         super(MonodepthLoss, self).__init__()
@@ -56,7 +51,7 @@ class MonodepthLoss(nn.modules.Module):
         flow_field = torch.stack((x_base + x_shifts, y_base), dim=3)
         # In grid_sample coordinates are assumed to be between -1 and 1
         output = F.grid_sample(img, 2*flow_field - 1, mode='bilinear',
-                               padding_mode='zeros')
+                               padding_mode='zeros', align_corners=False)
 
         return output
 

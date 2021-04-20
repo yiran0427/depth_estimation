@@ -1,3 +1,4 @@
+import os
 import torch
 import datetime
 import collections
@@ -7,7 +8,9 @@ from resnet import MyNet
 from loss import MonodepthLoss
 
 class Model(object):
-    def __init__(self, device='cpu', epochs=10, save_per_epoch='none', img_height=256, img_width=512, model_path='output_model', disp_path='output_disp'):
+    def __init__(self, train_loader, test_loader, device='cpu', epochs=10, save_per_epoch='none', img_height=256, img_width=512, model_path='output_model', disp_path='output_disp'):
+        self.train_loader = train_loader
+        self.test_loader = test_loader
         self.device = device
         self.epochs = epochs
         self.save_per_epoch = save_per_epoch
@@ -20,14 +23,14 @@ class Model(object):
         self.loss_function = MonodepthLoss(n=4, SSIM_w=0.85, disp_gradient_w=0.1, lr_w=1).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=1e-4)
 
-    def train(self, dataloader):
+    def train(self):
         self.model.train()
         start_time = datetime.datetime.now()
         train_loss = []
 
         for epoch in range(self.epochs):
             loss = 0
-            for data in dataloader:
+            for data in self.train_loader:
                 data = to_device(data, self.device)
                 left = data['left_image']
                 right = data['right_image']
@@ -39,7 +42,7 @@ class Model(object):
                 self.optimizer.step()
                 loss += batch_loss.item()
 
-            loss = loss / len(dataloader)
+            loss = loss / len(self.train_loader.dataset)
             train_loss.append(loss)
 
             if epoch % 10 == 0:
@@ -52,20 +55,23 @@ class Model(object):
         return train_loss
 
 
-    def test(self, dataloader):
+    def test(self, path):
+        self.load(path)
         self.model.eval()
 
-        disparities = np.zeros((len(dataloader), self.img_height, self.img_width), dtype=np.float32)
-        disparities_pp = np.zeros((len(dataloader), self.img_height, self.img_width), dtype=np.float32)
+        disparities = np.zeros((len(self.test_loader.dataset), self.img_height, self.img_width), dtype=np.float32)
+        disparities_pp = np.zeros((len(self.test_loader.dataset), self.img_height, self.img_width), dtype=np.float32)
 
         with torch.no_grad():
-            for idx, data in enumerate(dataloader):
+            for data in self.test_loader:
                 data = to_device(data, self.device)
                 left = data['left_image']
-                disps = self.model(left)
-                disp = disps[0][:, 0, :, :].unsqueeze(1)
-                disparities[idx] = disp[0].squeeze().cpu().numpy()
-                disparities_pp[idx] = post_process_disparity(disps[0][:, 0, :, :].cpu().numpy())
+                disps = self.model(left) 
+                disp = disps[0] # [batch, 2, width, height]
+                print(disp.shape)
+                for i in range(len(self.test_loader.dataset)):
+                    disparities[i] = disp[i, 0, :, :].squeeze().cpu().numpy()
+                    disparities_pp[i] = post_process_disparity(disp[i, :, :, :].cpu().numpy())
 
         np.save(self.disp_path + '/disparities.npy', disparities)
         np.save(self.disp_path + '/disparities_pp.npy', disparities_pp)
@@ -89,11 +95,10 @@ def post_process_disparity(disp):
 def to_device(input, device):
     if torch.is_tensor(input):
         return input.to(device=device)
-    elif isinstance(input, str):
-        return input
     elif isinstance(input, collections.Mapping):
-        return {k: to_device(sample, device=device) for k, sample in input.items()}
-    elif isinstance(input, collections.Sequence):
-        return [to_device(sample, device=device) for sample in input]
+        dic = {}
+        for k, v in input.items():
+            dic[k] = to_device(v, device=device)
+        return dic
     else:
-        raise TypeError(f"Input must contain tensor, dict or list, found {type(input)}")
+        print('TYPE ERROR!')
