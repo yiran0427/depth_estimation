@@ -5,12 +5,12 @@ import collections
 import numpy as np
 
 from resnet import MyNet
-from loss import MonodepthLoss
+from loss import Loss
 
 class Model(object):
     def __init__(self, train_loader, test_loader, device='cpu', epochs=10, save_per_epoch='none', 
         img_height=256, img_width=512, model_path='output_model', disp_path='output_disp'):
-    
+
         self.train_loader = train_loader
         self.test_loader = test_loader
         self.device = device
@@ -22,7 +22,7 @@ class Model(object):
         self.disp_path = disp_path
 
         self.model = MyNet().to(self.device)
-        self.loss_function = MonodepthLoss(n=4, SSIM_w=0.85, disp_gradient_w=0.1, lr_w=1).to(self.device)
+        self.loss_function = Loss(n=4, SSIM_w=0.85, disp_gradient_w=0.1, lr_w=1).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=1e-4)
 
     def train(self):
