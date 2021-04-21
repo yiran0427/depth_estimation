@@ -4,8 +4,8 @@ import datetime
 import collections
 import numpy as np
 
-from resnet import MyNet
-from loss import Loss
+from mylibs.resnet import MyNet
+from mylibs.loss import Loss
 
 class Model(object):
     def __init__(self, train_loader, test_loader, device='cpu', epochs=10, save_per_epoch='none', 
