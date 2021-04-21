@@ -69,7 +69,7 @@ class Model(object):
                 left = data['left_image']
                 disps = self.model(left) 
                 disp = disps[0] # [batch, 2, width, height]
-                for i in range(len(self.test_loader.dataset)):
+                for i in range(len(disp)):
                     disparities[i] = disp[i, 0, :, :].squeeze().cpu().numpy()
                     disparities_pp[i] = post_process_disparity(disp[i, :, :, :].cpu().numpy())
 
