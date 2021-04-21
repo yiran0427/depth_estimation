@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+# https://arxiv.org/pdf/1609.03677.pdf
 class MyNet(nn.Module):
     def __init__(self):
         super(MyNet, self).__init__()
