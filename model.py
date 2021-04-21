@@ -47,9 +47,8 @@ class Model(object):
             loss = loss / len(self.train_loader.dataset)
             train_loss.append(loss)
 
-            if epoch % 10 == 0:
-                current_time = datetime.datetime.now()
-                print('--- Epoch {}\tAverage Loss: {:.2f}\tTime: {}'.format(epoch, loss, str(current_time - start_time)))
+            current_time = datetime.datetime.now()
+            print('--- Epoch {}\tAverage Loss: {:.2f}\tTime: {}'.format(epoch, loss, str(current_time - start_time)))
 
             if self.save_per_epoch != "none" and epoch % self.save_per_epoch == 0:
                 self.save(os.path.join(self.model_path, str(epoch) + ".pt"))
