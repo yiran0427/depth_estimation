@@ -10,14 +10,26 @@ class Loss(nn.modules.Module):
         self.lr_w = lr_w
         self.n = n
 
-    def gradient_x(self, img): # img: [batch, 1, width, height]
-        gx = img - torch.roll(img, -1, 3)
-        gx[:, :, :, -1] = 0
+    # def gradient_x(self, img): # img: [batch, 1, width, height]
+    #     gx = img - torch.roll(img, -1, 3)
+    #     gx[:, :, :, -1] = 0
+    #     return gx
+
+    # def gradient_y(self, img): # img: [batch, 1, width, height]
+    #     gy = img - torch.roll(img, -1, 2)
+    #     gy[:, :, -1, :] = 0
+    #     return gy
+
+    def gradient_x(self, img):
+        # Pad input to keep output size consistent
+        img = F.pad(img, (0, 1, 0, 0), mode="replicate")
+        gx = img[:, :, :, :-1] - img[:, :, :, 1:]  # NCHW
         return gx
 
-    def gradient_y(self, img): # img: [batch, 1, width, height]
-        gy = img - torch.roll(img, -1, 2)
-        gy[:, :, -1, :] = 0
+    def gradient_y(self, img):
+        # Pad input to keep output size consistent
+        img = F.pad(img, (0, 0, 0, 1), mode="replicate")
+        gy = img[:, :, :-1, :] - img[:, :, 1:, :]  # NCHW
         return gy
 
     def scale_pyramid(self, img, num_scales):
@@ -59,13 +71,16 @@ class Loss(nn.modules.Module):
 
         mu_x = nn.AvgPool2d(3, 1)(x)
         mu_y = nn.AvgPool2d(3, 1)(y)
+        mu_x_mu_y = mu_x * mu_y
+        mu_x_sq = mu_x.pow(2)
+        mu_y_sq = mu_y.pow(2)
 
-        sigma_x = nn.AvgPool2d(3, 1)(x ** 2) - mu_x ** 2
-        sigma_y = nn.AvgPool2d(3, 1)(y ** 2) - mu_y ** 2
-        sigma_xy = nn.AvgPool2d(3, 1)(x * y) - mu_x * mu_y
+        sigma_x = nn.AvgPool2d(3, 1)(x * x) - mu_x_sq
+        sigma_y = nn.AvgPool2d(3, 1)(y * y) - mu_y_sq
+        sigma_xy = nn.AvgPool2d(3, 1)(x * y) - mu_x_mu_y
 
-        SSIM_n = (2 * mu_x * mu_y + C1) * (2 * sigma_xy + C2)
-        SSIM_d = (mu_x ** 2 + mu_y ** 2 + C1) * (sigma_x + sigma_y + C2)
+        SSIM_n = (2 * mu_x_mu_y + C1) * (2 * sigma_xy + C2)
+        SSIM_d = (mu_x_sq + mu_y_sq + C1) * (sigma_x + sigma_y + C2)
         SSIM = SSIM_n / SSIM_d
 
         return torch.clamp((1 - SSIM) / 2, 0, 1)
