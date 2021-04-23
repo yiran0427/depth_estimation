@@ -108,25 +108,24 @@ class MyNet(nn.Module):
         upconv4 = self.upconv4(F.interpolate(iconv5, scale_factor=2, mode='bilinear', align_corners=True))
         concat4 = torch.cat([upconv4, conv3], 1)
         iconv4 = self.iconv4(concat4)
-        self.disp4 = self.disp4_layer(iconv4)
+        self.disp4 = 0.3 * self.disp4_layer(iconv4)
         udisp4 = F.interpolate(self.disp4, scale_factor=2, mode='bilinear', align_corners=True)
         
         upconv3 = self.upconv3(F.interpolate(iconv4, scale_factor=2, mode='bilinear', align_corners=True))
         concat3 = torch.cat([upconv3, conv2, udisp4], 1)
         iconv3 = self.iconv3(concat3)
-        self.disp3 = self.disp3_layer(iconv3)
+        self.disp3 = 0.3 * self.disp3_layer(iconv3)
         udisp3 = F.interpolate(self.disp3, scale_factor=2, mode='bilinear', align_corners=True)
 
         upconv2 = self.upconv2(F.interpolate(iconv3, scale_factor=2, mode='bilinear', align_corners=True))
         concat2 = torch.cat([upconv2, conv1, udisp3], 1)
         iconv2 = self.iconv2(concat2)
-        self.disp2 = self.disp2_layer(iconv2)
+        self.disp2 = 0.3 * self.disp2_layer(iconv2)
         udisp2 = F.interpolate(self.disp2, scale_factor=2, mode='bilinear', align_corners=True)
         
         upconv1 = self.upconv1(F.interpolate(iconv2, scale_factor=2, mode='bilinear', align_corners=True))
         concat1 = torch.cat([upconv1, udisp2], 1)
         iconv1 = self.iconv1(concat1)
-        self.disp1 = self.disp1_layer(iconv1)
+        self.disp1 = 0.3 * self.disp1_layer(iconv1)
 
         return self.disp1, self.disp2, self.disp3, self.disp4
- 
