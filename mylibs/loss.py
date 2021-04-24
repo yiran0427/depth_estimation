@@ -12,12 +12,12 @@ class Loss(nn.modules.Module):
 
     # def gradient_x(self, img): # img: [batch, 1, width, height]
     #     gx = img - torch.roll(img, -1, 3)
-    #     gx[:, :, :, -1] = 0
+    #     gx[:, :, :, -1] = gx[:, :, :, -2]
     #     return gx
 
     # def gradient_y(self, img): # img: [batch, 1, width, height]
     #     gy = img - torch.roll(img, -1, 2)
-    #     gy[:, :, -1, :] = 0
+    #     gy[:, :, -1, :] = gy[:, :, -2, :]
     #     return gy
 
     def gradient_x(self, img):
@@ -47,14 +47,11 @@ class Loss(nn.modules.Module):
     def apply_disparity(self, img, disp):
         batch_size, _, height, width = img.size()
 
-        # Original coordinates of pixels
         x_base = torch.linspace(0, 1, width).repeat(batch_size, height, 1).type_as(img)
         y_base = torch.linspace(0, 1, height).repeat(batch_size, width, 1).transpose(1, 2).type_as(img)
 
-        # Apply shift in X direction
         x_shifts = disp[:, 0, :, :]
         flow_field = torch.stack((x_base + x_shifts, y_base), dim=3)
-        # In grid_sample coordinates are assumed to be between -1 and 1
         output = F.grid_sample(img, 2*flow_field - 1, mode='bilinear', padding_mode='zeros', align_corners=False)
 
         return output
@@ -101,35 +98,26 @@ class Loss(nn.modules.Module):
         return [torch.abs(smoothness_x[i]) + torch.abs(smoothness_y[i]) for i in range(self.n)]
 
     def forward(self, input, target):
-        """
-        Args:
-            input [disp1, disp2, disp3, disp4]
-            target [left, right]
-        Return:
-            (float): The loss
-        """
         left, right = target
         left_pyramid = self.scale_pyramid(left, self.n)
         right_pyramid = self.scale_pyramid(right, self.n)
 
-        # Prepare disparities
+        # Getting the disparity
         disp_left_est = [d[:, 0, :, :].unsqueeze(1) for d in input]
         disp_right_est = [d[:, 1, :, :].unsqueeze(1) for d in input]
 
         self.disp_left_est = disp_left_est
         self.disp_right_est = disp_right_est
         
-        # Generate images
+        # Estimate the left and right images using the disparity map
         left_est = [self.generate_image_left(right_pyramid[i], disp_left_est[i]) for i in range(self.n)]
         right_est = [self.generate_image_right(left_pyramid[i], disp_right_est[i]) for i in range(self.n)]
         self.left_est = left_est
         self.right_est = right_est
-
-        # L-R Consistency
+        
         right_left_disp = [self.generate_image_left(disp_right_est[i], disp_left_est[i]) for i in range(self.n)]
         left_right_disp = [self.generate_image_right(disp_left_est[i], disp_right_est[i]) for i in range(self.n)]
 
-        # Disparities smoothness
         disp_left_smoothness = self.disp_smoothness(disp_left_est, left_pyramid)
         disp_right_smoothness = self.disp_smoothness(disp_right_est, right_pyramid)
 
@@ -145,7 +133,7 @@ class Loss(nn.modules.Module):
         image_loss_right = [self.SSIM_w * ssim_right[i] + (1 - self.SSIM_w) * l1_right[i] for i in range(self.n)]
         image_loss = sum(image_loss_left + image_loss_right)
 
-        # L-R Consistency
+        # Left-Right Disparity Consistency
         lr_left_loss = [torch.mean(torch.abs(right_left_disp[i] - disp_left_est[i])) for i in range(self.n)]
         lr_right_loss = [torch.mean(torch.abs(left_right_disp[i] - disp_right_est[i])) for i in range(self.n)]
         lr_loss = sum(lr_left_loss + lr_right_loss)
