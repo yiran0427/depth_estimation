@@ -10,26 +10,14 @@ class Loss(nn.modules.Module):
         self.lr_w = lr_w
         self.n = n
 
-    # def gradient_x(self, img): # img: [batch, 1, width, height]
-    #     gx = img - torch.roll(img, -1, 3)
-    #     gx[:, :, :, -1] = gx[:, :, :, -2]
-    #     return gx
-
-    # def gradient_y(self, img): # img: [batch, 1, width, height]
-    #     gy = img - torch.roll(img, -1, 2)
-    #     gy[:, :, -1, :] = gy[:, :, -2, :]
-    #     return gy
-
-    def gradient_x(self, img):
-        # Pad input to keep output size consistent
-        img = F.pad(img, (0, 1, 0, 0), mode="replicate")
-        gx = img[:, :, :, :-1] - img[:, :, :, 1:]  # NCHW
+    def gradient_x(self, img): # img: [batch, 1, width, height]
+        gx = img - torch.roll(img, -1, 3)
+        gx[:, :, :, -1] = gx[:, :, :, -2]
         return gx
 
-    def gradient_y(self, img):
-        # Pad input to keep output size consistent
-        img = F.pad(img, (0, 0, 0, 1), mode="replicate")
-        gy = img[:, :, :-1, :] - img[:, :, 1:, :]  # NCHW
+    def gradient_y(self, img): # img: [batch, 1, width, height]
+        gy = img - torch.roll(img, -1, 2)
+        gy[:, :, -1, :] = gy[:, :, -2, :]
         return gy
 
     def scale_pyramid(self, img, num_scales):

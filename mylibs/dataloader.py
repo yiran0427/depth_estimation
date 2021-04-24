@@ -35,20 +35,7 @@ class KittiDataset(Dataset):
                     self.right_paths.append(os.path.join(right_dir, right_fname))
             for left_fname in left_fnames:
                 self.left_paths.append(os.path.join(left_dir, left_fname))
-              
-        
-        #if mode == 'train':
-        #    for zip_path in zip_paths:
-        #        if zip_path[0] == '.': continue
-        #        right_dir = os.path.join(root_dir, os.path.join(zip_path, 'image_03/data/'))
-        #        right_fnames = os.listdir(right_dir)
-        #        right_fnames.sort()
-        #        
-        #        for right_fname in right_fnames:
-        #            self.right_paths.append(os.path.join(right_dir, right_fname))
-
-        print(len(self.left_paths))
-        print(len(self.right_paths))     
+ 
         self.transform = transform
         self.mode = mode
 
